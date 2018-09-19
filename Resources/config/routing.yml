@@ -1,0 +1,3 @@
+page_template:
+    type: rest
+    resource: Puzzle\Api\PageBundle\Controller\TemplateController
