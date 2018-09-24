@@ -30,11 +30,10 @@
 		"webundle/puzzle-api-user" : "^1.0"
 	},
 	"autoload" : {
-		"psr-0" : {
-			"Webundle\\Puzzle\\Api\\PageBundle" : ""
+		"psr-4" : {
+			"Puzzle\\Api\\PageBundle\\" : ""
 		}
 	},
-	"target-dir" : "Webundle/Puzzle/Api/PageBundle",
 	"extra" : {
 		"branch-alias" : {
 			"dev-master" : "1.0-dev"
