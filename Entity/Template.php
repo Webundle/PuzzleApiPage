@@ -53,10 +53,6 @@ class Template
         return [ 'name' ];
     }
     
-    public function generateSlugValue($values) {
-        return implode('-', $values);
-    }
-    
     public function setContent($content) : self {
         $this->content = $content;
         return $this;
