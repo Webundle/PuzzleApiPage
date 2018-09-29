@@ -1,19 +1,4 @@
 services:
-    _defaults:
-        autowire: true
-        autoconfigure: true
-        public: false
-        
-    # Service
-    Puzzle\Api\PageBundle\:
-        resource: '%kernel.project_dir%/vendor/webundle/puzzle-api-page/*'
-        exclude: '%kernel.project_dir%/vendor/webundle/puzzle-api-page/{Entity,Repository,Tests}'
-    
-    # Controller
-    Puzzle\Api\PageBundle\Controller\:
-        resource: '%kernel.project_dir%/vendor/webundle/puzzle-api-page/Controller'
-        public: true
-        tags: ['controller.service_arguments']
     
         
     

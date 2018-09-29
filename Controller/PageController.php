@@ -2,19 +2,14 @@
 
 namespace Puzzle\Api\PageBundle\Controller;
 
-use JMS\Serializer\SerializerInterface;
 use Puzzle\Api\MediaBundle\PuzzleApiMediaEvents;
 use Puzzle\Api\MediaBundle\Event\FileEvent;
 use Puzzle\Api\MediaBundle\Util\MediaUtil;
 use Puzzle\Api\PageBundle\Entity\Page;
 use Puzzle\Api\PageBundle\Entity\Template;
 use Puzzle\OAuthServerBundle\Controller\BaseFOSRestController;
-use Puzzle\OAuthServerBundle\Service\ErrorFactory;
-use Puzzle\OAuthServerBundle\Service\Repository;
 use Puzzle\OAuthServerBundle\Service\Utils;
 use Puzzle\OAuthServerBundle\Util\FormatUtil;
-use Symfony\Bridge\Doctrine\RegistryInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -24,21 +19,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class PageController extends BaseFOSRestController
 {
-    /**
-     * @param RegistryInterface         $doctrine
-     * @param Repository                $repository
-     * @param SerializerInterface       $serializer
-     * @param EventDispatcherInterface  $dispatcher
-     * @param ErrorFactory              $errorFactory
-     */
-    public function __construct(
-        RegistryInterface $doctrine,
-        Repository $repository,
-        SerializerInterface $serializer,
-        EventDispatcherInterface $dispatcher,
-        ErrorFactory $errorFactory
-    ){
-        parent::__construct($doctrine, $repository, $serializer, $dispatcher, $errorFactory);
+    public function __construct(){
+        parent::__construct();
         $this->fields = ['name', 'content', 'parent', 'template'];
     }
     
@@ -48,7 +30,10 @@ class PageController extends BaseFOSRestController
 	 */
 	public function getPagesAction(Request $request) {
 	    $query = Utils::blameRequestQuery($request->query, $this->getUser());
-	    $response = $this->repository->filter($query, Page::class, $this->connection);
+	    
+	    /** @var Puzzle\OAuthServerBundle\Service\Repository $repository */
+	    $repository = $this->get('papis.repository');
+	    $response = $repository->filter($query, Page::class, $this->connection);
 	    
 	    return $this->handleView(FormatUtil::formatView($request, $response));
 	}
@@ -60,10 +45,12 @@ class PageController extends BaseFOSRestController
 	 */
 	public function getPageAction(Request $request, Page $page) {
 	    if ($page->getCreatedBy()->getId() !== $this->getUser()->getId()) {
-	        return $this->handleView($this->errorFactory->accessDenied($request));
+	        /** @var Puzzle\OAuthServerBundle\Service\ErrorFactory $errorFactory */
+	        $errorFactory = $this->get('papis.error_factory');
+	        return $this->handleView($errorFactory->accessDenied($request));
 	    }
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['resources' => $page]));
+	    return $this->handleView(FormatUtil::formatView($request, $page));
 	}
 	
 	/**
@@ -72,13 +59,13 @@ class PageController extends BaseFOSRestController
 	 */
 	public function postPageAction(Request $request) {
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    
 	    $data = $request->request->all();
 	    $data['parent'] = isset($data['parent']) && $data['parent'] ? $em->getRepository(Page::class)->find($data['parent']) : null;
 	    $data['template'] = isset($data['template']) && $data['template'] ? $em->getRepository(Template::class)->find($data['template']) : null;
 	    
-	    /** @var Page $page */
+	    /** @var Puzzle\Api\PageBundle\Entity\Page $page */
 	    $page = Utils::setter(new Page(), $this->fields, $data);
 	    
 	    $em->persist($page);
@@ -86,7 +73,9 @@ class PageController extends BaseFOSRestController
 	    
 	    /* Page picture listener */
 	    if (isset($data['picture']) && $data['picture']) {
-	        $this->dispatcher->dispatch(PuzzleApiMediaEvents::MEDIA_COPY_FILE, new FileEvent([
+	        /** @var Symfony\Component\EventDispatcher\EventDispatcher $dispatcher */
+	        $dispatcher = $this->get('event_dispatcher');
+	        $dispatcher->dispatch(PuzzleApiMediaEvents::MEDIA_COPY_FILE, new FileEvent([
 	            'path'     => $data['picture'],
 	            'folder'   => $data['uploadDir'] ?? MediaUtil::extractFolderNameFromClass(Page::class),
 	            'user'     => $this->getUser(),
@@ -94,7 +83,7 @@ class PageController extends BaseFOSRestController
 	        ]));
 	    }
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['resources' => $page]));
+	    return $this->handleView(FormatUtil::formatView($request, $page));
 	}
 	
 	/**
@@ -106,23 +95,27 @@ class PageController extends BaseFOSRestController
 	    $user = $this->getUser();
 	    
 	    if ($page->getCreatedBy()->getId() !== $user->getId()) {
-	        return $this->handleView($this->errorFactory->badRequest($request));
+	        /** @var Puzzle\OAuthServerBundle\Service\ErrorFactory $errorFactory */
+	        $errorFactory = $this->get('papis.error_factory');
+	        return $this->handleView($errorFactory->badRequest($request));
 	    }
 	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    
 	    $data = $request->request->all();
 	    if (isset($data['parent']) && $data['parent'] !== null) {
 	        $data['parent'] = $em->getRepository(Page::class)->find($data['parent']);
 	    }
 	    
-	    /** @var Page $page */
+	    /** @var Puzzle\Api\PageBundle\Entity\Page $page */
 	    $page = Utils::setter($page, $this->fields, $data);
 	    
 	    /* Article picture listener */
 	    if (isset($data['picture']) && $data['picture'] !== $page->getPicture()) {
-	        $this->dispatcher->dispatch(PuzzleApiMediaEvents::MEDIA_COPY_FILE, new FileEvent([
+	        /** @var Symfony\Component\EventDispatcher\EventDispatcher $dispatcher */
+	        $dispatcher = $this->get('event_dispatcher');
+	        $dispatcher->dispatch(PuzzleApiMediaEvents::MEDIA_COPY_FILE, new FileEvent([
 	            'path'     => $data['picture'],
 	            'folder'   => $data['uploadDir'] ?? MediaUtil::extractFolderNameFromClass(Page::class),
 	            'user'     => $this->getUser(),
@@ -132,7 +125,7 @@ class PageController extends BaseFOSRestController
 	    
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, $page));
 	}
 	
 	/**
@@ -142,13 +135,16 @@ class PageController extends BaseFOSRestController
 	 */
 	public function deletePageAction(Request $request, Page $page) {
 	    if ($page->getCreatedBy()->getId() !== $this->getUser()->getId()) {
-	        return $this->handleView($this->errorFactory->badRequest($request));
+	        /** @var Puzzle\OAuthServerBundle\Service\ErrorFactory $errorFactory */
+	        $errorFactory = $this->get('papis.error_factory');
+	        return $this->handleView($errorFactory->badRequest($request));
 	    }
 	    
-	    $em = $this->doctrine->getManager($this->connection);
+	    /** @var Doctrine\ORM\EntityManager $em */
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    $em->remove($page);
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, null, 204));
 	}
 }

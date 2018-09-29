@@ -9,6 +9,7 @@ use Puzzle\OAuthServerBundle\Traits\PrimaryKeyable;
 use Puzzle\OAuthServerBundle\Traits\Nameable;
 use Knp\DoctrineBehaviors\Model\Blameable\Blameable;
 use Knp\DoctrineBehaviors\Model\Sluggable\Sluggable;
+use Knp\DoctrineBehaviors\Model\Timestampable\Timestampable;
 
 
 /**
@@ -31,6 +32,7 @@ class Template
     use PrimaryKeyable,
         Nameable,
         Sluggable,
+        Timestampable,
         Blameable;
     
     /**

@@ -11,6 +11,7 @@ use Knp\DoctrineBehaviors\Model\Blameable\Blameable;
 use Doctrine\Common\Collections\Collection;
 use Puzzle\OAuthServerBundle\Traits\Pictureable;
 use Knp\DoctrineBehaviors\Model\Sluggable\Sluggable;
+use Knp\DoctrineBehaviors\Model\Timestampable\Timestampable;
 
 
 /**
@@ -46,6 +47,7 @@ class Page
 {
     use PrimaryKeyable,
         Nameable,
+        Timestampable,
         Pictureable,
         Sluggable,
         Blameable;
